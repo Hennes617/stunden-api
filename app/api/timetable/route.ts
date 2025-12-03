@@ -57,22 +57,25 @@ function parseXML(xmlText: string): TimetableData {
     const group = stdBlock.match(/<Ku2>(.*?)<\/Ku2>/)?.[1] || undefined
 
     const ifMatch = stdBlock.match(/<If>(.*?)<\/If>/)
-    const isSubstitution = ifMatch ? ifMatch[1].trim() !== "" : false
+    const substitutionFlag = ifMatch ? ifMatch[1].trim() : ""
+    const isSubstitution = substitutionFlag !== ""
 
     if (subject.toLowerCase().includes("spo") && !room) {
       room = "Sporthalle"
     }
 
-    lessons.push({
-      period,
-      startTime,
-      endTime,
-      subject,
-      teacher,
-      room,
-      group,
-      isSubstitution,
-    })
+    if (subject || teacher || room || isSubstitution) {
+      lessons.push({
+        period,
+        startTime,
+        endTime,
+        subject,
+        teacher,
+        room,
+        group,
+        isSubstitution,
+      })
+    }
   }
 
   return { class: "07b", lessons }
