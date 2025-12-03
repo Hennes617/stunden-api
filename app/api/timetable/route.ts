@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-const USERNAME = "schueler"
-const PASSWORD = "SchuelerFGO"
-const BASE_URL = "https://www.stundenplan24.de/20041773/mobil/mobdaten/"
+const USERNAME = process.env.NEXT_PUBLIC_USERNAME
+const PASSWORD = process.env.NEXT_PUBLIC_PASSWORD
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL
 const TIMETABLE_API_KEY = process.env.TIMETABLE_API_KEY
 
 interface Lesson {
@@ -103,6 +103,10 @@ export async function GET(request: NextRequest) {
       tomorrow.setDate(tomorrow.getDate() + 1)
       const filename = `PlanKl${tomorrow.getFullYear()}${String(tomorrow.getMonth() + 1).padStart(2, "0")}${String(tomorrow.getDate()).padStart(2, "0")}.xml`
       url += filename
+    }
+
+    if (!url) {
+      return NextResponse.json({ error: "Base URL not configured" }, { status: 500 })
     }
 
     const authHeader = "Basic " + Buffer.from(`${USERNAME}:${PASSWORD}`).toString("base64")
