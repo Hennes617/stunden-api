@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     } else {
       return NextResponse.json(
         {
-          code: 787,
+          code: 503,
           status: "offline",
           message: "Timetable API returned an error",
         },
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     return NextResponse.json(
       {
-        code: 787,
+        code: 503,
         status: "offline",
         message: "Timetable API is unreachable",
         error: error instanceof Error ? error.message : "Unknown error",
@@ -41,4 +41,5 @@ export async function GET(request: NextRequest) {
       { status: 503 }
     )
   }
+  
 }
