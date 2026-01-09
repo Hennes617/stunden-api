@@ -4,7 +4,7 @@ const TIMETABLE_API_KEY = process.env.TIMETABLE_API_KEY
 
 export async function GET(request: NextRequest) {
   try {
-    const response = await fetch(`${request.nextUrl.origin}/api/timetable?day=today`, {
+    const response = await fetch(`${request.nextUrl.origin}/api/timetable`, {
       headers: {
         "x-api-key": TIMETABLE_API_KEY || "",
       },
