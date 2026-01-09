@@ -51,9 +51,9 @@ export function TimetableTabs() {
     fetchData()
   }, [])
 
-  const formatDate = (daysOffset: number) => {
-    const date = new Date()
-    date.setDate(date.getDate() + daysOffset)
+  const formatDate = (isoDate?: string) => {
+    if (!isoDate) return ""
+    const date = new Date(`${isoDate}T00:00:00`)
     return date.toLocaleDateString("de-DE", {
       weekday: "long",
       year: "numeric",
@@ -96,7 +96,12 @@ export function TimetableTabs() {
         {loading ? (
           <TimetableSkeleton />
         ) : todayData ? (
-          <TimetableCard lessons={todayData.lessons} title="Stundenplan" date={formatDate(0)} />
+          <TimetableCard
+            lessons={todayData.lessons}
+            title="Stundenplan"
+            date={formatDate(todayData.date)}
+            notice={todayData.notice}
+          />
         ) : null}
       </TabsContent>
 
@@ -104,7 +109,12 @@ export function TimetableTabs() {
         {loading ? (
           <TimetableSkeleton />
         ) : tomorrowData ? (
-          <TimetableCard lessons={tomorrowData.lessons} title="Stundenplan" date={formatDate(1)} />
+          <TimetableCard
+            lessons={tomorrowData.lessons}
+            title="Stundenplan"
+            date={formatDate(tomorrowData.date)}
+            notice={tomorrowData.notice}
+          />
         ) : null}
       </TabsContent>
     </Tabs>

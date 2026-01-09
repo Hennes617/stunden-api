@@ -12,4 +12,6 @@ export interface Lesson {
 export interface TimetableData {
   class: string
   lessons: Lesson[]
+  date: string
+  notice?: string
 }

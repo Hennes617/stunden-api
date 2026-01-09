@@ -19,9 +19,11 @@ interface Lesson {
 interface TimetableData {
   class: string
   lessons: Lesson[]
+  date: string
+  notice?: string
 }
 
-function parseXML(xmlText: string): TimetableData {
+function parseXML(xmlText: string): Omit<TimetableData, "date" | "notice"> {
   const klRegex = /<Kl>([\s\S]*?)<\/Kl>/g
   let klMatch
   let targetKlBlock = ""
@@ -81,6 +83,45 @@ function parseXML(xmlText: string): TimetableData {
   return { class: "07b", lessons }
 }
 
+const MAX_LOOKAHEAD_DAYS = 30
+
+function toPlanFilename(date: Date) {
+  return `PlanKl${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(
+    date.getDate(),
+  ).padStart(2, "0")}.xml`
+}
+
+function toIsoDate(date: Date) {
+  return date.toISOString().slice(0, 10)
+}
+
+function isWeekend(date: Date) {
+  const day = date.getDay()
+  return day === 0 || day === 6
+}
+
+function nextWeekday(date: Date) {
+  const next = new Date(date)
+  while (isWeekend(next)) {
+    next.setDate(next.getDate() + 1)
+  }
+  return next
+}
+
+function nextSchoolDay(date: Date) {
+  const next = new Date(date)
+  next.setDate(next.getDate() + 1)
+  return nextWeekday(next)
+}
+
+function resolveBaseDate(day: string) {
+  const today = nextWeekday(new Date())
+  if (day === "tomorrow") {
+    return nextSchoolDay(today)
+  }
+  return today
+}
+
 export async function GET(request: NextRequest) {
   const apiKey = request.headers.get("x-api-key") || request.nextUrl.searchParams.get("key")
 
@@ -95,40 +136,47 @@ export async function GET(request: NextRequest) {
   const day = searchParams.get("day") || "today"
 
   try {
-    let url = BASE_URL
-
-    if (day === "today") {
-      const today = new Date()
-      const filename = `PlanKl${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}.xml`
-      url += filename
-    } else if (day === "tomorrow") {
-      const tomorrow = new Date()
-      tomorrow.setDate(tomorrow.getDate() + 1)
-      const filename = `PlanKl${tomorrow.getFullYear()}${String(tomorrow.getMonth() + 1).padStart(2, "0")}${String(tomorrow.getDate()).padStart(2, "0")}.xml`
-      url += filename
-    }
-
-    if (!url) {
+    if (!BASE_URL) {
       return NextResponse.json({ error: "Base URL not configured" }, { status: 500 })
     }
 
     const authHeader = "Basic " + Buffer.from(`${USERNAME}:${PASSWORD}`).toString("base64")
 
-    const response = await fetch(url, {
-      headers: {
-        Authorization: authHeader,
-      },
-      cache: "no-store",
-    })
+    let targetDate = resolveBaseDate(day)
 
-    if (!response.ok) {
+    for (let attempts = 0; attempts < MAX_LOOKAHEAD_DAYS; attempts++) {
+      const url = `${BASE_URL}${toPlanFilename(targetDate)}`
+      const response = await fetch(url, {
+        headers: {
+          Authorization: authHeader,
+        },
+        cache: "no-store",
+      })
+
+      if (response.ok) {
+        const xmlText = await response.text()
+        const data = parseXML(xmlText)
+
+        return NextResponse.json({
+          ...data,
+          date: toIsoDate(targetDate),
+        })
+      }
+
+      if (response.status === 404) {
+        targetDate = nextSchoolDay(targetDate)
+        continue
+      }
+
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
-    const xmlText = await response.text()
-    const data = parseXML(xmlText)
-
-    return NextResponse.json(data)
+    return NextResponse.json({
+      class: "07b",
+      lessons: [],
+      date: toIsoDate(resolveBaseDate(day)),
+      notice: "Ferien - kein Stundenplan verfügbar.",
+    })
   } catch (error) {
     console.error("Error fetching timetable:", error)
     return NextResponse.json({ error: "Failed to fetch timetable data" }, { status: 500 })
